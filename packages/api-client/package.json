@@ -1,0 +1,20 @@
+{
+  "name": "@namo/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed Namo API client — response envelope handling and token refresh.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@namo/types": "workspace:*",
+    "@namo/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

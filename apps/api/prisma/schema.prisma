@@ -1,0 +1,244 @@
+// Namo API — PostgreSQL schema.
+// Conventions (master guide, section 9): UUID primary keys, audit timestamps
+// on every table, soft deletes on aggregate roots, indexed foreign keys.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PARENT
+  PEDIATRICIAN
+  ADMIN
+  GOV_PROGRAM
+  HOSPITAL
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNDISCLOSED
+}
+
+enum QuestionnaireStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AssessmentStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ResponseValue {
+  YES
+  SOMETIMES
+  NOT_YET
+}
+
+enum Zone {
+  NORMAL
+  GREY_ZONE
+  DELAY
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         UserRole  @default(PARENT)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  children              Child[]
+  refreshTokens         RefreshToken[]
+  createdQuestionnaires Questionnaire[] @relation("QuestionnaireCreatedBy")
+  startedAssessments    Assessment[]    @relation("AssessmentStartedBy")
+  auditLogs             AuditLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // SHA-256 of the opaque refresh token; the raw token is never stored.
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Child {
+  id                  String    @id @default(uuid()) @db.Uuid
+  parentId            String    @db.Uuid
+  parent              User      @relation(fields: [parentId], references: [id])
+  firstName           String
+  lastName            String?
+  dateOfBirth         DateTime  @db.Date
+  gender              Gender    @default(UNDISCLOSED)
+  gestationalAgeWeeks Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  assessments Assessment[]
+
+  @@index([parentId])
+  @@map("children")
+}
+
+model Questionnaire {
+  id             String              @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  version        Int                 @default(1)
+  status         QuestionnaireStatus @default(DRAFT)
+  // Inclusive child-age band, in months, this questionnaire applies to.
+  ageMinMonths   Int
+  ageMaxMonths   Int
+  // Optional per-questionnaire response weight overrides; null uses engine defaults.
+  yesScore       Float?
+  sometimesScore Float?
+  notYetScore    Float?
+  publishedAt    DateTime?
+  createdById    String              @db.Uuid
+  createdBy      User                @relation("QuestionnaireCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+
+  domains     Domain[]
+  assessments Assessment[]
+
+  @@index([status])
+  @@index([ageMinMonths, ageMaxMonths])
+  @@map("questionnaires")
+}
+
+model Domain {
+  id                  String   @id @default(uuid()) @db.Uuid
+  questionnaireId     String   @db.Uuid
+  questionnaire       Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  name                String
+  code                String
+  order               Int
+  delayThreshold      Float
+  monitoringThreshold Float
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  questions    Question[]
+  domainScores DomainScore[]
+
+  @@unique([questionnaireId, code])
+  @@index([questionnaireId])
+  @@map("domains")
+}
+
+model Question {
+  id        String   @id @default(uuid()) @db.Uuid
+  domainId  String   @db.Uuid
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  text      String
+  helpText  String?
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responses Response[]
+
+  @@index([domainId])
+  @@map("questions")
+}
+
+model Assessment {
+  id              String           @id @default(uuid()) @db.Uuid
+  childId         String           @db.Uuid
+  child           Child            @relation(fields: [childId], references: [id])
+  questionnaireId String           @db.Uuid
+  questionnaire   Questionnaire    @relation(fields: [questionnaireId], references: [id])
+  startedById     String           @db.Uuid
+  startedBy       User             @relation("AssessmentStartedBy", fields: [startedById], references: [id])
+  status          AssessmentStatus @default(IN_PROGRESS)
+  // Child age in months at the time the assessment was started (snapshot).
+  childAgeMonths  Int
+  totalScore      Float?
+  totalMaxScore   Float?
+  overallZone     Zone?
+  completedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  responses    Response[]
+  domainScores DomainScore[]
+
+  @@index([childId])
+  @@index([questionnaireId])
+  @@index([status])
+  @@map("assessments")
+}
+
+model Response {
+  id           String        @id @default(uuid()) @db.Uuid
+  assessmentId String        @db.Uuid
+  assessment   Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionId   String        @db.Uuid
+  question     Question      @relation(fields: [questionId], references: [id])
+  value        ResponseValue
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+  @@map("responses")
+}
+
+model DomainScore {
+  id           String     @id @default(uuid()) @db.Uuid
+  assessmentId String     @db.Uuid
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  domainId     String     @db.Uuid
+  domain       Domain     @relation(fields: [domainId], references: [id])
+  rawScore     Float
+  maxScore     Float
+  zone         Zone
+  createdAt    DateTime   @default(now())
+
+  @@unique([assessmentId, domainId])
+  @@index([assessmentId])
+  @@map("domain_scores")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

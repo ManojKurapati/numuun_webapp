@@ -1,0 +1,35 @@
+# Local development infrastructure for the Namo platform.
+# Usage: docker compose -f infrastructure/docker/docker-compose.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: namo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: namo
+      POSTGRES_PASSWORD: namo
+      POSTGRES_DB: namo
+    ports:
+      # Host port 5544 avoids clashing with a locally installed PostgreSQL.
+      - '5544:5432'
+    volumes:
+      - namo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U namo -d namo']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: namo-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - namo-redis-data:/data
+
+volumes:
+  namo-postgres-data:
+  namo-redis-data:

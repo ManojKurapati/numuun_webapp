@@ -1,0 +1,35 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+secrets/
+*.p8
+*-service-account.json
+gcp-document-ai.json
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Logs / OS
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+.idea/
+
+# Test / coverage
+coverage/
+
+# Prisma local db
+apps/api/prisma/*.db
+
+claude.md
+questionaires

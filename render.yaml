@@ -1,0 +1,49 @@
+# Render Blueprint — provisions the Namo API + PostgreSQL database.
+# Deploy: push to GitHub, then in Render → "New" → "Blueprint" → pick this repo.
+#
+# This covers the backend only. The Next.js web app is deployed separately on
+# Vercel (see DEPLOYMENT.md). Redis is not required for the current MVP.
+
+databases:
+  - name: namo-db
+    databaseName: namo
+    user: namo
+    plan: free # free Postgres is deleted after 30 days — fine for testing
+    # Render has no Middle East region — Frankfurt is the closest to the Gulf.
+    # The database and the API must share a region for private networking.
+    region: frankfurt
+
+services:
+  - type: web
+    name: namo-api
+    runtime: node
+    plan: free # free web services cold-start after 15 min idle
+    region: frankfurt # closest Render region to the Middle East
+    branch: main
+    rootDir: .
+    healthCheckPath: /v1/health
+    autoDeploy: true
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @namo/api db:generate &&
+      pnpm turbo run build --filter=@namo/api
+    # Applies pending migrations on every deploy, then starts the server.
+    startCommand: >-
+      pnpm --filter @namo/api db:deploy &&
+      pnpm --filter @namo/api start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: namo-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true # Render generates a strong random value
+      # Set to your Vercel web URL after the frontend is deployed,
+      # e.g. https://namo-web.vercel.app (comma-separated for multiple).
+      - key: CORS_ORIGINS
+        sync: false
+      - key: LOG_LEVEL
+        value: info
