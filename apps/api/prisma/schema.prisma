@@ -66,6 +66,13 @@ model User {
   createdQuestionnaires Questionnaire[] @relation("QuestionnaireCreatedBy")
   startedAssessments    Assessment[]    @relation("AssessmentStartedBy")
   auditLogs             AuditLog[]
+  assignedReferrals     Referral[]      @relation("ReferralAssignee")
+  createdReferrals      Referral[]      @relation("ReferralCreatedBy")
+  createdInterventions  Intervention[]  @relation("InterventionCreatedBy")
+  uploadedQuestionnaires QuestionnaireUpload[] @relation("UploadCreatedBy")
+  reviewedQuestionnaireUploads QuestionnaireUpload[] @relation("UploadReviewedBy")
+  createdCampaigns      Campaign[]      @relation("CampaignCreatedBy")
+  authoredChildNotes    ChildNote[]     @relation("ChildNoteAuthor")
 
   @@index([role])
   @@map("users")
@@ -99,6 +106,8 @@ model Child {
   deletedAt           DateTime?
 
   assessments Assessment[]
+  referrals   Referral[]
+  notes       ChildNote[]
 
   @@index([parentId])
   @@map("children")
@@ -240,5 +249,184 @@ model AuditLog {
 
   @@index([actorId])
   @@index([entityType, entityId])
+  @@index([createdAt])
   @@map("audit_logs")
+}
+
+// --- Admin-domain models -----------------------------------------------------
+
+enum ReferralPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReferralStatus {
+  OPEN
+  ACCEPTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReferralKind {
+  PEDIATRICIAN
+  SPEECH_THERAPY
+  OCCUPATIONAL_THERAPY
+  PHYSICAL_THERAPY
+  PSYCHOLOGY
+  OTHER
+}
+
+model Referral {
+  id          String           @id @default(uuid()) @db.Uuid
+  childId     String           @db.Uuid
+  child       Child            @relation(fields: [childId], references: [id])
+  kind        ReferralKind
+  priority    ReferralPriority @default(MEDIUM)
+  status      ReferralStatus   @default(OPEN)
+  reason      String
+  notes       String?
+  // Free-text outcome captured after the referral closes.
+  outcome     String?
+  assigneeId  String?          @db.Uuid
+  assignee    User?            @relation("ReferralAssignee", fields: [assigneeId], references: [id])
+  createdById String           @db.Uuid
+  createdBy   User             @relation("ReferralCreatedBy", fields: [createdById], references: [id])
+  scheduledAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  @@index([childId])
+  @@index([status])
+  @@index([priority])
+  @@map("referrals")
+}
+
+enum InterventionDifficulty {
+  EASY
+  MODERATE
+  CHALLENGING
+}
+
+model Intervention {
+  id              String                 @id @default(uuid()) @db.Uuid
+  title           String
+  description     String
+  // Comma-separated domain codes the intervention supports (e.g. "GM,FM").
+  domainCodes     String
+  ageMinMonths    Int
+  ageMaxMonths    Int
+  difficulty      InterventionDifficulty @default(EASY)
+  durationMinutes Int
+  materials       String?
+  videoUrl        String?
+  thumbnailUrl    String?
+  // Lightweight effectiveness signal — % of children whose next assessment improved.
+  effectiveness   Float?
+  views           Int                    @default(0)
+  completions     Int                    @default(0)
+  isPublished     Boolean                @default(false)
+  createdById     String                 @db.Uuid
+  createdBy       User                   @relation("InterventionCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  deletedAt       DateTime?
+
+  @@index([isPublished])
+  @@index([ageMinMonths, ageMaxMonths])
+  @@map("interventions")
+}
+
+enum UploadStatus {
+  UPLOADED
+  PROCESSING
+  EXTRACTED
+  NEEDS_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+}
+
+model QuestionnaireUpload {
+  id              String       @id @default(uuid()) @db.Uuid
+  fileName        String
+  // Source content type — application/pdf, image/*, etc.
+  mimeType        String
+  sizeBytes       Int
+  // Pseudo-URL or storage key — the real upload integration is out of scope.
+  storageKey      String
+  status          UploadStatus @default(UPLOADED)
+  // Confidence the AI extraction had in the structured output.
+  confidence      Float?
+  // Structured extraction (domains, questions, age band) as JSON.
+  extracted       Json?
+  // Per-field validation flags or OCR warnings produced by the extractor.
+  warnings        Json?
+  // The questionnaire created on approval, if any.
+  questionnaireId String?      @db.Uuid
+  reviewNotes     String?
+  reviewedById    String?      @db.Uuid
+  reviewedBy      User?        @relation("UploadReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  createdById     String       @db.Uuid
+  createdBy       User         @relation("UploadCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([status])
+  @@map("questionnaire_uploads")
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  CANCELLED
+}
+
+model Campaign {
+  id            String              @id @default(uuid()) @db.Uuid
+  title         String
+  body          String
+  channel       NotificationChannel @default(PUSH)
+  // Comma-separated UserRole values targeted by this campaign.
+  audienceRoles String              @default("PARENT")
+  status        CampaignStatus      @default(DRAFT)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  recipientCount Int                @default(0)
+  createdById   String              @db.Uuid
+  createdBy     User                @relation("CampaignCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  deletedAt     DateTime?
+
+  @@index([status])
+  @@map("campaigns")
+}
+
+model ChildNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  childId     String   @db.Uuid
+  child       Child    @relation(fields: [childId], references: [id])
+  body        String
+  // Tagged note kind — pediatrician, admin, etc.
+  kind        String   @default("ADMIN")
+  authorId    String   @db.Uuid
+  author      User     @relation("ChildNoteAuthor", fields: [authorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([childId])
+  @@map("child_notes")
 }
