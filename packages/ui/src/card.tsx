@@ -1,9 +1,9 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from './cn';
 
-/** Surface card — 32px radius, soft glow shadow, white on the cream page. */
+/** Surface card — frosted glass over the warm page wash. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-2xl bg-surface shadow-glow', className)} {...props} />;
+  return <div className={cn('namo-glass rounded-2xl shadow-glow', className)} {...props} />;
 }
 
 /** Interactive card variant — lifts on hover. */
@@ -11,7 +11,7 @@ export function CardLink({ className, ...props }: HTMLAttributes<HTMLDivElement>
   return (
     <div
       className={cn(
-        'rounded-2xl bg-surface shadow-glow transition-all duration-200',
+        'namo-glass rounded-2xl shadow-glow transition-all duration-200',
         'hover:-translate-y-0.5 hover:shadow-glow-lg',
         className,
       )}

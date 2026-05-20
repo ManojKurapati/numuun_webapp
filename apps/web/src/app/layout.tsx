@@ -1,23 +1,7 @@
 import type { Metadata } from 'next';
-import { Fraunces, IBM_Plex_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Providers } from './providers';
 import './globals.css';
-
-const ibmPlex = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-ibm-plex',
-  display: 'swap',
-});
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-fraunces',
-  display: 'swap',
-});
 
 /**
  * Canonical, absolute base URL for the site — used to resolve Open Graph and
@@ -82,7 +66,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${ibmPlex.variable} ${fraunces.variable}`}>
+    <html lang="en">
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>

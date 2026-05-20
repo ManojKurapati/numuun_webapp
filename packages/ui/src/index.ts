@@ -14,3 +14,18 @@ export {
 } from './feedback';
 export type { BadgeTone, Zone, AlertVariant } from './feedback';
 export { ProgressBar, StatCard, PageHeader, Logo } from './data';
+export {
+  KpiTile,
+  KpiStrip,
+  Sparkline,
+  Donut,
+  BarRow,
+  DataTable,
+  FilterBar,
+  DetailDrawer,
+  RiskBadge,
+  StatusBadge,
+  SectionCard,
+  QueueTile,
+} from './admin';
+export type { KpiTileProps, DataColumn, DataTableProps, DonutSlice } from './admin';

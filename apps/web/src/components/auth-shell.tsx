@@ -80,7 +80,7 @@ export function AuthShell({
           <div className="mb-8 flex justify-center lg:hidden">
             <Logo />
           </div>
-          <div className="rounded-3xl border border-sand-200 bg-surface p-8 shadow-glow sm:p-10">
+          <div className="namo-glass rounded-3xl p-8 shadow-glow sm:p-10">
             <h1 className="font-display text-3xl font-medium tracking-tight text-ink">{title}</h1>
             {subtitle && <p className="mt-2 text-sm leading-relaxed text-ink-muted">{subtitle}</p>}
             <div className="mt-7">{children}</div>

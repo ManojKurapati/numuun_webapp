@@ -76,7 +76,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-12">
       {/* Greeting hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-sand-200 bg-surface p-7 shadow-soft sm:p-9">
+      <section className="namo-glass relative overflow-hidden rounded-3xl p-7 shadow-glow sm:p-9">
+        <div className="absolute inset-0 namo-aurora opacity-50" aria-hidden="true" />
         <div
           className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-primary-100/70 blur-3xl"
           aria-hidden="true"
@@ -130,7 +131,7 @@ export default function DashboardPage() {
         {isError && <Alert variant="error">We couldn&apos;t load your children just now.</Alert>}
 
         {children && children.length === 0 && (
-          <div className="flex flex-col items-center rounded-3xl border border-dashed border-sand-300 bg-surface px-6 py-14 text-center">
+          <div className="namo-glass flex flex-col items-center rounded-3xl border-dashed border-sand-300 px-6 py-14 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 text-3xl">
               🌱
             </div>
@@ -152,7 +153,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {children.map((child, i) => (
               <Link key={child.id} href={`/children/${child.id}`} className="group">
-                <div className="flex h-full items-center gap-4 rounded-3xl border border-sand-200 bg-surface p-6 shadow-soft transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-glow-lg">
+                <div className="flex h-full items-center gap-4 namo-glass rounded-3xl p-6 shadow-soft transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-glow-lg">
                   <span
                     className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold ${
                       AVATAR_TONES[i % AVATAR_TONES.length]
@@ -198,7 +199,7 @@ export default function DashboardPage() {
           {PLAY_IDEAS.map((idea) => (
             <div
               key={idea.title}
-              className="flex gap-4 rounded-3xl border border-sand-200 bg-surface p-5 shadow-soft"
+              className="namo-glass flex gap-4 rounded-3xl p-5 shadow-soft"
             >
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sand-100 text-2xl">
                 {idea.emoji}
@@ -231,7 +232,7 @@ export default function DashboardPage() {
           {DOMAIN_NOTES.map((domain) => (
             <div
               key={domain.name}
-              className="flex items-start gap-3 rounded-2xl border border-sand-200 bg-surface p-4"
+              className="namo-glass flex items-start gap-3 rounded-2xl p-4"
             >
               <span className="text-xl">{domain.emoji}</span>
               <div>

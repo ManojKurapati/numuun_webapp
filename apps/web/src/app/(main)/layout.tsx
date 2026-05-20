@@ -28,7 +28,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
     </div>
   );
 }

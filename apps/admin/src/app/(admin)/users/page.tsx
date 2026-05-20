@@ -4,9 +4,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '@namo/api-client';
+import { ApiError, type PublicUser } from '@namo/api-client';
 import { USER_ROLES } from '@namo/types';
-import { Alert, Badge, Button, Card, CardBody, Field, Input, PageHeader, Select, Skeleton } from '@namo/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  DataTable,
+  Field,
+  FilterBar,
+  Input,
+  KpiStrip,
+  KpiTile,
+  PageHeader,
+  Select,
+  type DataColumn,
+} from '@namo/ui';
 import { adminCreateUserSchema, type AdminCreateUserInput } from '@namo/validation';
 import { api } from '@/lib/api';
 import { formatDate, humanize } from '@/lib/format';
@@ -15,10 +30,11 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState('');
 
   const usersQuery = useQuery({
     queryKey: ['users'],
-    queryFn: () => api().listUsers({ pageSize: 100 }),
+    queryFn: () => api().listUsers({ pageSize: 200 }),
   });
 
   const {
@@ -38,9 +54,18 @@ export default function UsersPage() {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       reset({ role: 'PARENT', email: '', password: '', fullName: '', phone: '' });
       setShowForm(false);
+      setFormError(null);
     },
     onError: (error) =>
       setFormError(error instanceof ApiError ? error.message : 'Could not create the user.'),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (params: { id: string; isActive: boolean }) =>
+      api().setUserActive(params.id, params.isActive),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
   });
 
   const onSubmit = handleSubmit((values) => {
@@ -48,17 +73,80 @@ export default function UsersPage() {
     createMutation.mutate(values);
   });
 
+  const items = usersQuery.data?.items ?? [];
+  const filtered = roleFilter ? items.filter((user) => user.role === roleFilter) : items;
+  const totals = USER_ROLES.reduce<Record<string, number>>((acc, role) => {
+    acc[role] = items.filter((user) => user.role === role).length;
+    return acc;
+  }, {});
+
+  const columns: DataColumn<PublicUser>[] = [
+    {
+      key: 'user',
+      header: 'User',
+      render: (user) => (
+        <div>
+          <p className="font-medium text-ink">{user.fullName}</p>
+          <p className="text-xs text-ink-soft">{user.email}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      render: (user) => <Badge tone="neutral">{humanize(user.role)}</Badge>,
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      render: (user) => <span className="text-ink-muted">{user.phone ?? '—'}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (user) => (
+        <Badge tone={user.isActive ? 'teal' : 'clay'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
+      ),
+    },
+    {
+      key: 'joined',
+      header: 'Joined',
+      render: (user) => <span className="text-xs text-ink-muted">{formatDate(user.createdAt)}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (user) => (
+        <Button
+          size="sm"
+          variant={user.isActive ? 'ghost' : 'primary'}
+          onClick={() => toggleMutation.mutate({ id: user.id, isActive: !user.isActive })}
+          loading={toggleMutation.isPending && toggleMutation.variables?.id === user.id}
+        >
+          {user.isActive ? 'Deactivate' : 'Reactivate'}
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
-        title="Users"
-        description="Parents, clinicians and administrators."
+        title="Users & roles"
+        description="Manage administrators, clinicians, parents and partner organisations."
         actions={
           <Button onClick={() => setShowForm((open) => !open)} variant={showForm ? 'ghost' : 'primary'}>
             {showForm ? 'Cancel' : 'Add user'}
           </Button>
         }
       />
+
+      <KpiStrip>
+        <KpiTile label="Total users" value={items.length} />
+        <KpiTile label="Parents" value={totals.PARENT ?? 0} icon="🧑‍🍼" />
+        <KpiTile label="Clinicians" value={totals.PEDIATRICIAN ?? 0} icon="🩺" />
+        <KpiTile label="Administrators" value={totals.ADMIN ?? 0} icon="🛡" tone="positive" />
+      </KpiStrip>
 
       {showForm && (
         <Card>
@@ -111,43 +199,29 @@ export default function UsersPage() {
         </Card>
       )}
 
-      {usersQuery.isLoading && <Skeleton className="h-64" />}
+      <FilterBar>
+        <Select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+          <option value="">Any role</option>
+          {USER_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {humanize(role)}
+            </option>
+          ))}
+        </Select>
+        <div className="ml-auto text-xs text-ink-soft">
+          {usersQuery.data ? `${filtered.length} of ${usersQuery.data.total} users` : ' '}
+        </div>
+      </FilterBar>
+
       {usersQuery.isError && <Alert variant="error">We couldn&apos;t load users.</Alert>}
 
-      {usersQuery.data && (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-sand-200 text-left text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-6 py-3 font-medium">Name</th>
-                  <th className="px-6 py-3 font-medium">Email</th>
-                  <th className="px-6 py-3 font-medium">Role</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium">Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersQuery.data.items.map((user) => (
-                  <tr key={user.id} className="border-b border-sand-200 last:border-0">
-                    <td className="px-6 py-4 font-medium text-ink">{user.fullName}</td>
-                    <td className="px-6 py-4 text-ink-muted">{user.email}</td>
-                    <td className="px-6 py-4">
-                      <Badge tone="neutral">{humanize(user.role)}</Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge tone={user.isActive ? 'teal' : 'clay'}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-ink-muted">{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+      <DataTable<PublicUser>
+        columns={columns}
+        rows={filtered}
+        rowKey={(row) => row.id}
+        loading={usersQuery.isLoading}
+        empty="No users match these filters."
+      />
     </div>
   );
 }

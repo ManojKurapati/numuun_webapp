@@ -1,23 +1,43 @@
 import type { Paginated, QuestionnaireStatus } from '@namo/types';
 import type {
   AdminCreateUserInput,
+  CreateCampaignInput,
   CreateChildInput,
+  CreateChildNoteInput,
+  CreateInterventionInput,
   CreateQuestionnaireInput,
+  CreateReferralInput,
+  CreateUploadInput,
   LoginInput,
   RegisterInput,
+  ReviewUploadInput,
   StartAssessmentInput,
   SubmitResponsesInput,
+  UpdateCampaignInput,
   UpdateChildInput,
+  UpdateInterventionInput,
+  UpdateReferralInput,
 } from '@namo/validation';
 import type {
+  AdminChildProfile,
+  AdminChildRow,
   AssessmentDetail,
   AssessmentSummary,
+  AuditEntryRow,
   AuthResult,
+  CampaignRow,
   Child,
+  ExecutiveSnapshot,
+  InterventionRow,
   PlatformOverview,
   PublicUser,
   QuestionnaireDetail,
   QuestionnaireSummary,
+  ReferralRow,
+  RiskLevel,
+  SystemHealth,
+  UploadDetail,
+  UploadRow,
 } from './models';
 import type { TokenStore } from './tokens';
 
@@ -268,5 +288,148 @@ export class NamoClient {
     params: { page?: number; pageSize?: number } = {},
   ): Promise<Paginated<AssessmentSummary>> {
     return this.request('GET', `/admin/assessments${query(params)}`);
+  }
+
+  // ---- Executive / system ------------------------------------------------
+
+  adminExecutive(): Promise<ExecutiveSnapshot> {
+    return this.request<ExecutiveSnapshot>('GET', '/admin/executive');
+  }
+
+  adminSystemHealth(): Promise<SystemHealth> {
+    return this.request<SystemHealth>('GET', '/admin/system-health');
+  }
+
+  // ---- Children: search, profile, notes ----------------------------------
+
+  adminSearchChildren(
+    params: {
+      q?: string;
+      riskLevel?: RiskLevel;
+      ageMinMonths?: number;
+      ageMaxMonths?: number;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ): Promise<Paginated<AdminChildRow>> {
+    return this.request('GET', `/admin/children/search${query(params)}`);
+  }
+
+  adminHighRisk(
+    params: { minRiskLevel?: RiskLevel } = {},
+  ): Promise<{ items: AdminChildRow[] }> {
+    return this.request('GET', `/admin/children/high-risk${query(params)}`);
+  }
+
+  adminChildProfile(id: string): Promise<AdminChildProfile> {
+    return this.request<AdminChildProfile>('GET', `/admin/children/${id}`);
+  }
+
+  adminAddChildNote(id: string, input: CreateChildNoteInput): Promise<{ added: true }> {
+    return this.request('POST', `/admin/children/${id}/notes`, input);
+  }
+
+  // ---- Referrals ----------------------------------------------------------
+
+  adminReferrals(
+    params: {
+      status?: string;
+      priority?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ): Promise<Paginated<ReferralRow>> {
+    return this.request('GET', `/admin/referrals${query(params)}`);
+  }
+
+  adminCreateReferral(input: CreateReferralInput): Promise<ReferralRow> {
+    return this.request<ReferralRow>('POST', '/admin/referrals', input);
+  }
+
+  adminUpdateReferral(id: string, input: UpdateReferralInput): Promise<ReferralRow> {
+    return this.request<ReferralRow>('PATCH', `/admin/referrals/${id}`, input);
+  }
+
+  // ---- Interventions ------------------------------------------------------
+
+  adminInterventions(
+    params: {
+      domain?: string;
+      published?: 'true' | 'false';
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ): Promise<Paginated<InterventionRow>> {
+    return this.request('GET', `/admin/interventions${query(params)}`);
+  }
+
+  adminGetIntervention(id: string): Promise<InterventionRow> {
+    return this.request<InterventionRow>('GET', `/admin/interventions/${id}`);
+  }
+
+  adminCreateIntervention(input: CreateInterventionInput): Promise<InterventionRow> {
+    return this.request<InterventionRow>('POST', '/admin/interventions', input);
+  }
+
+  adminUpdateIntervention(id: string, input: UpdateInterventionInput): Promise<InterventionRow> {
+    return this.request<InterventionRow>('PATCH', `/admin/interventions/${id}`, input);
+  }
+
+  // ---- AI extraction review ----------------------------------------------
+
+  adminUploads(
+    params: { status?: string; page?: number; pageSize?: number } = {},
+  ): Promise<Paginated<UploadRow>> {
+    return this.request('GET', `/admin/uploads${query(params)}`);
+  }
+
+  adminGetUpload(id: string): Promise<UploadDetail> {
+    return this.request<UploadDetail>('GET', `/admin/uploads/${id}`);
+  }
+
+  adminCreateUpload(input: CreateUploadInput): Promise<UploadRow> {
+    return this.request<UploadRow>('POST', '/admin/uploads', input);
+  }
+
+  adminRunExtraction(id: string): Promise<UploadDetail> {
+    return this.request<UploadDetail>('POST', `/admin/uploads/${id}/extract`);
+  }
+
+  adminReviewUpload(id: string, input: ReviewUploadInput): Promise<UploadDetail> {
+    return this.request<UploadDetail>('PATCH', `/admin/uploads/${id}/review`, input);
+  }
+
+  // ---- Campaigns ----------------------------------------------------------
+
+  adminCampaigns(
+    params: { status?: string; page?: number; pageSize?: number } = {},
+  ): Promise<Paginated<CampaignRow>> {
+    return this.request('GET', `/admin/campaigns${query(params)}`);
+  }
+
+  adminCreateCampaign(input: CreateCampaignInput): Promise<CampaignRow> {
+    return this.request<CampaignRow>('POST', '/admin/campaigns', input);
+  }
+
+  adminUpdateCampaign(id: string, input: UpdateCampaignInput): Promise<CampaignRow> {
+    return this.request<CampaignRow>('PATCH', `/admin/campaigns/${id}`, input);
+  }
+
+  adminSendCampaign(id: string): Promise<CampaignRow> {
+    return this.request<CampaignRow>('POST', `/admin/campaigns/${id}/send`);
+  }
+
+  // ---- Audit log ----------------------------------------------------------
+
+  adminAudit(
+    params: {
+      actorId?: string;
+      entityType?: string;
+      action?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ): Promise<Paginated<AuditEntryRow>> {
+    return this.request('GET', `/admin/audit${query(params)}`);
   }
 }

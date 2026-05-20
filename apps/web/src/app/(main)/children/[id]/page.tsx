@@ -39,27 +39,35 @@ export default function ChildDetailPage() {
       {child && (
         <>
           {/* Child hero */}
-          <section className="relative overflow-hidden rounded-3xl border border-sand-200 bg-surface p-7 shadow-soft sm:p-8">
+          <section className="namo-glass relative overflow-hidden rounded-3xl p-7 shadow-glow sm:p-8">
+            <div className="absolute inset-0 namo-aurora opacity-50" aria-hidden="true" />
             <div
               className="absolute -right-14 -top-14 h-48 w-48 rounded-full bg-primary-100/70 blur-3xl"
               aria-hidden="true"
             />
+            <div
+              className="absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-teal-100/60 blur-3xl"
+              aria-hidden="true"
+            />
             <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-2xl font-semibold text-primary-700">
-                  {child.firstName.charAt(0).toUpperCase()}
-                </span>
+                <div className="relative">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-clay-500 text-2xl font-semibold text-white shadow-glow-lg">
+                    {child.firstName.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-primary-400 to-clay-500 opacity-40 blur-md" aria-hidden="true" />
+                </div>
                 <div>
-                  <h1 className="font-display text-2xl font-medium tracking-tight text-ink">
+                  <h1 className="font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">
                     {child.firstName} {child.lastName ?? ''}
                   </h1>
                   <p className="mt-0.5 text-sm text-ink-muted">
                     {ageLabel(child.ageMonths)} · born {formatDate(child.dateOfBirth)}
                   </p>
                   {completed > 0 && (
-                    <p className="mt-1 text-xs font-medium text-teal-600">
-                      {completed} completed check-in{completed === 1 ? '' : 's'}
-                    </p>
+                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
+                      <span aria-hidden="true">🏆</span> {completed} quest{completed === 1 ? '' : 's'} completed
+                    </span>
                   )}
                 </div>
               </div>
@@ -92,7 +100,7 @@ export default function ChildDetailPage() {
               <div className="space-y-3">
                 {assessments.map((assessment) => (
                   <Link key={assessment.id} href={`/assessments/${assessment.id}`} className="group block">
-                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-sand-200 bg-surface p-5 shadow-soft transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-glow-lg sm:p-6">
+                    <div className="namo-glass flex items-center justify-between gap-4 rounded-2xl p-5 shadow-soft transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-glow-lg sm:p-6">
                       <div className="flex items-center gap-4">
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sand-100 text-lg">
                           {assessment.status === 'COMPLETED' ? '✅' : '✏️'}

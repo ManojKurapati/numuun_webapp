@@ -20,7 +20,7 @@ export function AppHeader() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-sand-200 bg-sand-50/85 backdrop-blur-md">
+    <header className="namo-glass sticky top-0 z-30 border-b border-white/40">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" aria-label="Namo home">
